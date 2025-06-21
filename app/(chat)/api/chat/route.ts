@@ -6,7 +6,7 @@ import {
 } from 'ai';
 
 import { auth } from '@/app/(auth)/auth';
-import { myProvider } from '@/lib/ai/models';
+import { myProvider } from '@/lib/ai/models'; // Import the updated myProvider
 import { systemPrompt } from '@/lib/ai/prompts';
 import {
   deleteChatById,
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
   try {
     // Use the languageModel method to select the model dynamically based on selectedChatModel
-    const selectedModel = myProvider.languageModel(selectedChatModel); // Dynamically select model
+    const selectedModel = myProvider.languageModel('deepseek/deepseek-r1-distill-qwen-32b:free'); // Use correct model
 
     // Fetch the response from OpenRouter using the selected model
     const response = await fetch(OPENROUTER_API_URL, {
