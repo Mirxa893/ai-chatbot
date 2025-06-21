@@ -26,6 +26,9 @@ import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 
+// Define the Hugging Face API URL
+const HUGGINGFACE_API_URL = "https://mirxakamran893-LOGIQCURVECHATIQBOT.hf.space/chat";
+
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
@@ -33,8 +36,7 @@ export async function POST(request: Request) {
     id,
     messages,
     selectedChatModel,
-  }: { id: string; messages: Array<Message>; selectedChatModel: string } =
-    await request.json();
+  }: { id: string; messages: Array<Message>; selectedChatModel: string } = await request.json();
 
   const session = await auth();
 
@@ -59,73 +61,54 @@ export async function POST(request: Request) {
     messages: [{ ...userMessage, createdAt: new Date(), chatId: id }],
   });
 
-  return createDataStreamResponse({
-    execute: (dataStream) => {
-      const result = streamText({
-        model: myProvider.languageModel(selectedChatModel),
-        system: systemPrompt({ selectedChatModel }),
-        messages,
-        maxSteps: 5,
-        experimental_activeTools:
-          selectedChatModel === 'chat-model-reasoning'
-            ? []
-            : [
-                'getWeather',
-                'createDocument',
-                'updateDocument',
-                'requestSuggestions',
-              ],
-        experimental_transform: smoothStream({ chunking: 'word' }),
-        experimental_generateMessageId: generateUUID,
-        tools: {
-          getWeather,
-          createDocument: createDocument({ session, dataStream }),
-          updateDocument: updateDocument({ session, dataStream }),
-          requestSuggestions: requestSuggestions({
-            session,
-            dataStream,
-          }),
+  try {
+    // Send the user message to Hugging Face API for chat replies
+    const response = await fetch(HUGGINGFACE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // If Hugging Face API requires an API key, include it here
+        // 'Authorization': `Bearer YOUR_HUGGINGFACE_API_KEY`,
+      },
+      body: JSON.stringify({
+        inputs: {
+          message: userMessage.content, // Send the user's message content
         },
-        onFinish: async ({ response, reasoning }) => {
-          if (session.user?.id) {
-            try {
-              const sanitizedResponseMessages = sanitizeResponseMessages({
-                messages: response.messages,
-                reasoning,
-              });
+      }),
+    });
 
-              await saveMessages({
-                messages: sanitizedResponseMessages.map((message) => {
-                  return {
-                    id: message.id,
-                    chatId: id,
-                    role: message.role,
-                    content: message.content,
-                    createdAt: new Date(),
-                  };
-                }),
-              });
-            } catch (error) {
-              console.error('Failed to save chat');
-            }
-          }
-        },
-        experimental_telemetry: {
-          isEnabled: true,
-          functionId: 'stream-text',
-        },
+    const data = await response.json();
+
+    // Ensure that the response contains the expected data
+    if (data && data.reply) {
+      const chatReply = data.reply;  // This is the reply from Hugging Face API
+
+      // Save the response from Hugging Face into your messages collection
+      await saveMessages({
+        messages: [
+          {
+            role: 'assistant',
+            content: chatReply,
+            createdAt: new Date(),
+            chatId: id,
+          },
+        ],
       });
 
-      result.consumeStream();
-
-      result.mergeIntoDataStream(dataStream, {
-        sendReasoning: true,
+      // Return the response data
+      return new Response(JSON.stringify({ reply: chatReply }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-    },
-    onError: () => {
-      return 'Oops, an error occured!';
-    },
-  });
+    } else {
+      return new Response('Error: No reply from Hugging Face API', { status: 500 });
+    }
+  } catch (error) {
+    console.error('Error while contacting Hugging Face API:', error);
+    return new Response('Error while processing request', { status: 500 });
+  }
 }
 
 export async function DELETE(request: Request) {
@@ -156,5 +139,36 @@ export async function DELETE(request: Request) {
     return new Response('An error occurred while processing your request', {
       status: 500,
     });
+  }
+}
+
+export async function PUT(request: Request) {
+  // This PUT method might be used for updating the chat, e.g., marking a chat as read
+  const { id, status }: { id: string; status: string } = await request.json();
+  const session = await auth();
+
+  if (!session || !session.user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  try {
+    const chat = await getChatById({ id });
+
+    if (!chat) {
+      return new Response('Chat not found', { status: 404 });
+    }
+
+    if (chat.userId !== session.user.id) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    // Update the status of the chat or any other necessary fields
+    chat.status = status; // For example, marking it as read
+    await saveChat({ id, userId: session.user.id, status });
+
+    return new Response('Chat updated', { status: 200 });
+  } catch (error) {
+    console.error('Error while updating chat:', error);
+    return new Response('Error while processing request', { status: 500 });
   }
 }
