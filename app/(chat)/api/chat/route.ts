@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Check if the selected model exists and is valid
+    // Ensure the model selection is restricted to the three models you want to use
     const validModels = ['gpt-4.1', 'o3', 'o4-mini'];
     if (!validModels.includes(selectedChatModel)) {
       return new Response('Invalid model selected', { status: 400 });
