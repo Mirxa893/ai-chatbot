@@ -1,32 +1,26 @@
-// Define the OpenRouter API URL
-const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
+// Define the default model
+export const DEFAULT_CHAT_MODEL: string = 'deepseek/deepseek-r1-distill-qwen-32b:free'; // Use OpenRouter's model
 
-// Set up your OpenRouter API Key here (replace with your actual API key)
-const OPENROUTER_API_KEY = 'your-openrouter-api-key';  // Replace with your OpenRouter API Key
-
-export const myProvider = {
+// Define available models
+export const myProvider = customProvider({
   languageModels: {
-    // Using OpenRouter's DeepSeek model for AI language processing
-    'deepseek-model': async (messages: Array<Message>) => {
-      const response = await fetch(OPENROUTER_API_URL, {
+    'deepseek/deepseek-r1-distill-qwen-32b:free': async (messages: Array<Message>) => {
+      const response = await fetch('https://api.openrouter.ai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'deepseek/deepseek-r1-distill-qwen-32b:free',  // The specific OpenRouter model
-          messages: messages.map(message => ({
-            role: message.role,
-            content: message.content,
-          })),
+          model: 'deepseek/deepseek-r1-distill-qwen-32b:free',
+          messages,
         }),
       });
 
       const data = await response.json();
 
-      if (data && data.reply) {
-        return data.reply; // Returning the model's reply
+      if (data.reply) {
+        return data.reply;
       } else {
         throw new Error('Error: No reply from OpenRouter API');
       }
@@ -34,25 +28,18 @@ export const myProvider = {
   },
   imageModels: {
     'small-model': async () => {
-      // Image model handling code here
+      // Image model logic
     },
     'large-model': async () => {
-      // Image model handling code here
+      // Image model logic
     },
   },
-};
-
-// Define available chat models with only the DeepSeek model
-interface ChatModel {
-  id: string;
-  name: string;
-  description: string;
-}
+});
 
 export const chatModels: Array<ChatModel> = [
   {
-    id: 'deepseek-model',
+    id: 'deepseek/deepseek-r1-distill-qwen-32b:free',
     name: 'DeepSeek Model',
-    description: 'Advanced reasoning and AI-powered solutions using the DeepSeek model.',
+    description: 'Advanced reasoning and text generation model from OpenRouter.',
   },
 ];
