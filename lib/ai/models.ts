@@ -1,5 +1,4 @@
-// Correct import statement at the top
-import { customProvider } from 'ai'; // Ensure correct import
+import { customProvider, LanguageModelV1 } from 'ai'; // Import necessary types
 
 // Define OpenRouter API URL (replace with actual API endpoint)
 const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
@@ -11,8 +10,8 @@ export const DEFAULT_CHAT_MODEL: string = 'deepseek/deepseek-r1-distill-qwen-32b
 // Export the language model provider
 export const myProvider = customProvider({
   languageModels: {
-    // Define only the models you want to use (OpenRouter model in this case)
-    'deepseek/deepseek-r1-distill-qwen-32b:free': async (messages: Array<Message>) => {
+    // Define the OpenRouter model properly using LanguageModelV1
+    'deepseek/deepseek-r1-distill-qwen-32b:free': async (messages: Array<Message>): Promise<LanguageModelV1> => {
       const response = await fetch(OPENROUTER_API_URL, {
         method: 'POST',
         headers: {
@@ -28,14 +27,15 @@ export const myProvider = customProvider({
       const data = await response.json();
 
       if (data.reply) {
-        return data.reply;
+        return {
+          text: data.reply,  // Ensure the response matches LanguageModelV1's structure
+        };
       } else {
         throw new Error('Error: No reply from OpenRouter API');
       }
     },
   },
   imageModels: {
-    // Example for image models, modify as needed
     'small-model': async () => {},
     'large-model': async () => {},
   },
@@ -43,7 +43,7 @@ export const myProvider = customProvider({
 
 export const chatModels = [
   {
-    id: 'deepseek/deepseek-r1-distill-qwen-32b:free',  // OpenRouter model ID
+    id: 'deepseek/deepseek-r1-distill-qwen-32b:free',
     name: 'DeepSeek Model',
     description: 'Advanced reasoning and text generation model from OpenRouter.',
   },
