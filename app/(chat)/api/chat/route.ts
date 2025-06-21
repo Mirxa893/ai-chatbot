@@ -36,12 +36,12 @@ export async function POST(request: Request) {
     await saveChat({ id, userId: session.user.id, title });
   }
 
-  // Save the user message with a generated UUID for the message ID
+  // Generate a unique ID for the user message
   const userMessageWithId = {
     ...userMessage,
     createdAt: new Date(),
     chatId: id,
-    id: generateUUID(), // Add a unique `id` for the user message
+    id: generateUUID(), // Ensure each message has a unique ID
   };
 
   await saveMessages({
@@ -69,17 +69,17 @@ export async function POST(request: Request) {
     if (data && data.reply) {
       const chatReply = data.reply; // This is the reply from Hugging Face API
 
-      // Save the assistant's reply with a unique ID
+      // Generate a unique ID for the assistant's reply
       const assistantMessageWithId = {
         role: 'assistant',
         content: chatReply,
         createdAt: new Date(),
         chatId: id,
-        id: generateUUID(), // Add a unique `id` for the assistant's reply
+        id: generateUUID(), // Ensure the assistant's reply has a unique ID
       };
 
       await saveMessages({
-        messages: [assistantMessageWithId], // Save the assistant's reply with a unique `id`
+        messages: [assistantMessageWithId], // Save the assistant's reply with the unique `id`
       });
 
       return new Response(JSON.stringify({ reply: chatReply }), {
