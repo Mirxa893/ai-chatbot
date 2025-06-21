@@ -3,7 +3,7 @@ import {
   createDataStreamResponse,
   smoothStream,
   streamText,
-} from 'ai'; // Make sure to import `Message` from 'ai'
+} from 'ai';
 
 import { auth } from '@/app/(auth)/auth';
 import { myProvider } from '@/lib/ai/models';
@@ -25,6 +25,11 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
+
+// Define OpenRouter API URL
+const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions'; // Define the correct OpenRouter API endpoint
+
+const OPENROUTER_API_KEY = 'your-openrouter-api-key'; // Replace with your actual OpenRouter API Key
 
 export const maxDuration = 60;
 
@@ -72,7 +77,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`, // Include the OpenRouter API key for authentication
       },
       body: JSON.stringify({
         model: 'deepseek/deepseek-r1-distill-qwen-32b:free', // OpenRouter's free model
@@ -110,5 +115,36 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error while processing request:', error);
     return new Response('Error while processing request', { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return new Response('Not Found', { status: 404 });
+  }
+
+  const session = await auth();
+
+  if (!session || !session.user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  try {
+    const chat = await getChatById({ id });
+
+    if (chat.userId !== session.user.id) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    await deleteChatById({ id });
+
+    return new Response('Chat deleted', { status: 200 });
+  } catch (error) {
+    return new Response('An error occurred while processing your request', {
+      status: 500,
+    });
   }
 }
