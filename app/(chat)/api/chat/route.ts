@@ -12,18 +12,6 @@ import { generateTitleFromUserMessage } from '../../actions';
 // Define the Hugging Face API URL
 const HUGGINGFACE_API_URL = "https://mirxakamran893-LOGIQCURVECHATIQBOT.hf.space/chat";
 
-// Define pre-messages (system messages to guide the AI)
-const preMessages = [
-  {
-    role: 'system',
-    content: 'You are LogIQ Curve AI, an intelligent assistant powered by Hugging Face.',
-  },
-  {
-    role: 'system',
-    content: 'Please assist the user with any queries related to LogIQ Curve services and AI-powered solutions.',
-  },
-];
-
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
@@ -48,14 +36,17 @@ export async function POST(request: Request) {
     await saveChat({ id, userId: session.user.id, title });
   }
 
+  // Save the user message with a generated UUID for the message ID
   await saveMessages({
-    messages: [{ ...userMessage, createdAt: new Date(), chatId: id, id: generateUUID() }], // Add the `id` field here
+    messages: [{
+      ...userMessage, 
+      createdAt: new Date(),
+      chatId: id,
+      id: generateUUID(), // Ensure each message has a unique ID
+    }],
   });
 
   try {
-    // Combine pre-messages with user messages to send them as context to Hugging Face API
-    const combinedMessages = [...preMessages, ...messages];
-
     // Send the user message to Hugging Face API for chat replies
     const response = await fetch(HUGGINGFACE_API_URL, {
       method: 'POST',
