@@ -54,7 +54,6 @@ export async function POST(request: Request) {
     await saveChat({ id, userId: session.user.id, title });
   }
 
-  // Save the user message with a generated UUID for the message ID
   await saveMessages({
     messages: [{
       ...userMessage,
@@ -65,10 +64,10 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Use only the DeepSeek model (no other models available)
+    // Ensure the selected model is the DeepSeek model
     const selectedModel = myProvider.languageModels['deepseek-model'];
 
-    // Stream the text using the selected DeepSeek model
+    // Stream the text using the DeepSeek model
     return createDataStreamResponse({
       execute: (dataStream) => {
         const result = streamText({
