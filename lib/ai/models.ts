@@ -1,24 +1,23 @@
-// Import the required method from the 'ai' SDK (or the relevant package you're using)
-import { customProvider } from 'ai'; // Ensure this is the correct package you're using
+import { customProvider } from 'ai'; // Ensure correct import
 
-// Define the default model
-export const DEFAULT_CHAT_MODEL: string = 'deepseek/deepseek-r1-distill-qwen-32b:free'; // OpenRouter's free model
-
-// Define the OpenRouter API URL (used in our model)
+// Define OpenRouter API URL (replace with actual API endpoint)
 const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
+const OPENROUTER_API_KEY = 'your-openrouter-api-key'; // Replace with your actual OpenRouter API key
 
+// Export the language model provider
 export const myProvider = customProvider({
   languageModels: {
+    // Define only the models you want to use (OpenRouter model in this case)
     'deepseek/deepseek-r1-distill-qwen-32b:free': async (messages: Array<Message>) => {
       const response = await fetch(OPENROUTER_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`, // Authorization header
         },
         body: JSON.stringify({
-          model: 'deepseek/deepseek-r1-distill-qwen-32b:free',
-          messages,
+          model: 'deepseek/deepseek-r1-distill-qwen-32b:free', // Your OpenRouter model
+          messages: messages,
         }),
       });
 
@@ -32,18 +31,19 @@ export const myProvider = customProvider({
     },
   },
   imageModels: {
+    // Example for image models, modify as needed
     'small-model': async () => {
-      // Example for image model handling
+      // Handle small model
     },
     'large-model': async () => {
-      // Example for image model handling
+      // Handle large model
     },
   },
 });
 
-export const chatModels: Array<ChatModel> = [
+export const chatModels = [
   {
-    id: 'deepseek/deepseek-r1-distill-qwen-32b:free',
+    id: 'deepseek/deepseek-r1-distill-qwen-32b:free',  // Your OpenRouter model ID
     name: 'DeepSeek Model',
     description: 'Advanced reasoning and text generation model from OpenRouter.',
   },
