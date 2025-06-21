@@ -65,16 +65,10 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Ensure the model selection is restricted to the three models you want to use
-    const validModels = ['gpt-4.1', 'o3', 'o4-mini'];
-    if (!validModels.includes(selectedChatModel)) {
-      return new Response('Invalid model selected', { status: 400 });
-    }
+    // Use only the DeepSeek model (no other models available)
+    const selectedModel = myProvider.languageModels['deepseek-model'];
 
-    // Use the `languageModel()` method to select the model dynamically based on `selectedChatModel`
-    const selectedModel = myProvider.languageModel(selectedChatModel) || myProvider.languageModel('gpt-4.1'); // Default to 'gpt-4.1' if not found
-
-    // Stream the text using the selected model
+    // Stream the text using the selected DeepSeek model
     return createDataStreamResponse({
       execute: (dataStream) => {
         const result = streamText({
@@ -133,9 +127,7 @@ export async function POST(request: Request) {
         });
 
         result.consumeStream();
-        result.mergeIntoDataStream(dataStream, {
-          sendReasoning: true,
-        });
+        result.mergeIntoDataStream(dataStream);
       },
       onError: () => {
         return 'Oops, an error occurred!';
