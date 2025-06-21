@@ -1,6 +1,6 @@
 'use server';
 
-import { generateText, Message } from 'ai';
+import { Message } from 'ai';
 import { cookies } from 'next/headers';
 
 import {
@@ -9,32 +9,50 @@ import {
   updateChatVisiblityById,
 } from '@/lib/db/queries';
 import { VisibilityType } from '@/components/visibility-selector';
-import { myProvider } from '@/lib/ai/models';
 
+// Define the OpenRouter API URL (for DeepSeek model)
+const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
+const OPENROUTER_API_KEY = 'your-openrouter-api-key';  // Replace with your OpenRouter API key
+
+// Save the selected chat model as a cookie
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
   cookieStore.set('chat-model', model);
 }
 
+// Function to generate title from user message using OpenRouter's DeepSeek model
 export async function generateTitleFromUserMessage({
   message,
 }: {
   message: Message;
 }) {
-  // Corrected model selection, using `myProvider.languageModels['deepseek-model']`
-  const { text: title } = await generateText({
-    model: myProvider.languageModels['deepseek-model'],  // Use the deepseek model directly
-    system: `\n
-    - you will generate a short title based on the first message a user begins a conversation with
-    - ensure it is not more than 80 characters long
-    - the title should be a summary of the user's message
-    - do not use quotes or colons`,
-    prompt: JSON.stringify(message),
+  const response = await fetch(OPENROUTER_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'deepseek/deepseek-r1-distill-qwen-32b:free', // OpenRouter model for text generation
+      messages: [
+        {
+          role: 'user',
+          content: message.content, // Sending user message content for title generation
+        },
+      ],
+    }),
   });
 
-  return title;
+  const data = await response.json();
+
+  if (data && data.reply) {
+    return data.reply; // Returning the model's generated title
+  } else {
+    throw new Error('Error: No reply from OpenRouter API');
+  }
 }
 
+// Function to delete trailing messages by chatId
 export async function deleteTrailingMessages({ id }: { id: string }) {
   const [message] = await getMessageById({ id });
 
@@ -44,6 +62,7 @@ export async function deleteTrailingMessages({ id }: { id: string }) {
   });
 }
 
+// Function to update chat visibility
 export async function updateChatVisibility({
   chatId,
   visibility,
