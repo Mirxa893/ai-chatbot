@@ -1,26 +1,23 @@
-import { openai } from '@ai-sdk/openai';
-import { fireworks } from '@ai-sdk/fireworks';
-import {
-  customProvider,
-} from 'ai';
+import { openRouter } from 'openrouter';
 
-// Default model
-export const DEFAULT_CHAT_MODEL: string = 'gpt-4.1';  // Set default model to gpt-4.1
-
-// Define available models
-export const myProvider = customProvider({
-  languageModels: {
-    'gpt-4.1': openai('gpt-4'),  // Use GPT-4.1 model
-    'o4-mini': openai('o4-mini'),  // Use o4-mini for fast tasks
-    'o3': fireworks('accounts/fireworks/models/o3'), // Reasoning model (o3)
-  },
-  imageModels: {
-    'small-model': openai.image('dall-e-2'),
-    'large-model': openai.image('dall-e-3'),
-  },
+// Initialize OpenRouter with your API Key (replace 'your-openrouter-api-key' with your actual key)
+const openRouterClient = openRouter({
+  apiKey: 'your-openrouter-api-key',  // Replace with your OpenRouter API Key
 });
 
-// Define your available chat models
+// Define the model you want to use (only OpenRouter's DeepSeek model)
+export const myProvider = {
+  languageModels: {
+    // Use OpenRouter's DeepSeek model for all language processing tasks
+    'deepseek-model': openRouterClient.getModel('deepseek/deepseek-r1-distill-qwen-32b:free'), // OpenRouter's free model
+  },
+  imageModels: {
+    'small-model': openRouterClient.getImageModel('dall-e-2'), // Example image generation model
+    'large-model': openRouterClient.getImageModel('dall-e-3'),
+  },
+};
+
+// Define available chat models with only the DeepSeek model
 interface ChatModel {
   id: string;
   name: string;
@@ -29,18 +26,8 @@ interface ChatModel {
 
 export const chatModels: Array<ChatModel> = [
   {
-    id: 'gpt-4.1',
-    name: 'GPT-4.1',
-    description: 'Advanced model with high performance for general tasks.',
-  },
-  {
-    id: 'o4-mini',
-    name: 'o4-mini',
-    description: 'Fast, lightweight model for fast tasks and efficient performance.',
-  },
-  {
-    id: 'o3',
-    name: 'o3',
-    description: 'Model for advanced reasoning and complex analysis tasks.',
+    id: 'deepseek-model',
+    name: 'DeepSeek Model',
+    description: 'Advanced reasoning and AI-powered solutions using the DeepSeek model.',
   },
 ];
