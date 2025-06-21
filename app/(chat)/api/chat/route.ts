@@ -26,6 +26,10 @@ import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 
+// Define OpenRouter API URL
+const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
+const OPENROUTER_API_KEY = 'your-openrouter-api-key'; // Replace with your OpenRouter API Key
+
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
@@ -59,79 +63,54 @@ export async function POST(request: Request) {
       ...userMessage,
       createdAt: new Date(),
       chatId: id,
-      id: generateUUID(), // Ensure each message has a unique ID
+      id: generateUUID(),
     }],
   });
 
   try {
-    // Ensure the selected model is the DeepSeek model
-    const selectedModel = myProvider.languageModels['deepseek-model'];
+    // Ensure that 'deepseek-model' is selected or fallback to a default model
+    const selectedModel = myProvider.languageModels[selectedChatModel] || myProvider.languageModels['deepseek-model'];
 
-    // Stream the text using the DeepSeek model
-    return createDataStreamResponse({
-      execute: (dataStream) => {
-        const result = streamText({
-          model: selectedModel,
-          system: systemPrompt({ selectedChatModel }),
-          messages,
-          maxSteps: 5,
-          experimental_activeTools:
-            selectedChatModel === 'chat-model-reasoning'
-              ? []
-              : [
-                  'getWeather',
-                  'createDocument',
-                  'updateDocument',
-                  'requestSuggestions',
-                ],
-          experimental_transform: smoothStream({ chunking: 'word' }),
-          experimental_generateMessageId: generateUUID,
-          tools: {
-            getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-            }),
-          },
-          onFinish: async ({ response, reasoning }) => {
-            if (session.user?.id) {
-              try {
-                const sanitizedResponseMessages = sanitizeResponseMessages({
-                  messages: response.messages,
-                  reasoning,
-                });
-
-                await saveMessages({
-                  messages: sanitizedResponseMessages.map((message) => {
-                    return {
-                      id: message.id,  // Ensure each message has an id
-                      chatId: id,
-                      role: message.role,
-                      content: message.content,
-                      createdAt: new Date(),
-                    };
-                  }),
-                });
-              } catch (error) {
-                console.error('Failed to save chat');
-              }
-            }
-          },
-          experimental_telemetry: {
-            isEnabled: true,
-            functionId: 'stream-text',
-          },
-        });
-
-        result.consumeStream();
-        result.mergeIntoDataStream(dataStream);
+    // Fetch the response from OpenRouter using the selected model
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       },
-      onError: () => {
-        return 'Oops, an error occurred!';
-      },
+      body: JSON.stringify({
+        model: 'deepseek/deepseek-r1-distill-qwen-32b:free', // OpenRouter's free model
+        messages: messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+      }),
     });
+
+    const data = await response.json();
+
+    if (data && data.reply) {
+      // After getting the response from OpenRouter, process it further
+      const chatReply = data.reply;  // The assistant's reply from OpenRouter
+
+      // Save the assistant's response in the database
+      await saveMessages({
+        messages: [{
+          role: 'assistant',
+          content: chatReply,
+          createdAt: new Date(),
+          chatId: id,
+          id: generateUUID(),  // Ensure that each message has a unique ID
+        }],
+      });
+
+      return new Response(JSON.stringify({ reply: chatReply }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } else {
+      return new Response('Error: No reply from OpenRouter API', { status: 500 });
+    }
   } catch (error) {
     console.error('Error while processing request:', error);
     return new Response('Error while processing request', { status: 500 });
