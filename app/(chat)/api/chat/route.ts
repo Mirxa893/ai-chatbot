@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   }
 
   await saveMessages({
-    messages: [{ ...userMessage, createdAt: new Date(), chatId: id }],
+    messages: [{ ...userMessage, createdAt: new Date(), chatId: id, id: generateUUID() }], // Add the `id` field here
   });
 
   try {
@@ -85,6 +85,7 @@ export async function POST(request: Request) {
             content: chatReply,
             createdAt: new Date(),
             chatId: id,
+            id: generateUUID(), // Generate a unique `id` for the response message
           },
         ],
       });
