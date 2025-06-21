@@ -1,74 +1,58 @@
-'use server';
-
-import { Message } from 'ai';
-import { cookies } from 'next/headers';
-
-import {
-  deleteMessagesByChatIdAfterTimestamp,
-  getMessageById,
-  updateChatVisiblityById,
-} from '@/lib/db/queries';
-import { VisibilityType } from '@/components/visibility-selector';
-
-// Define the OpenRouter API URL (for DeepSeek model)
+// Define the OpenRouter API URL
 const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
-const OPENROUTER_API_KEY = 'your-openrouter-api-key';  // Replace with your OpenRouter API key
 
-// Save the selected chat model as a cookie
-export async function saveChatModelAsCookie(model: string) {
-  const cookieStore = await cookies();
-  cookieStore.set('chat-model', model);
-}
+// Set up your OpenRouter API Key here (replace with your actual API key)
+const OPENROUTER_API_KEY = 'your-openrouter-api-key';  // Replace with your OpenRouter API Key
 
-// Function to generate title from user message using OpenRouter's DeepSeek model
-export async function generateTitleFromUserMessage({
-  message,
-}: {
-  message: Message;
-}) {
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'deepseek/deepseek-r1-distill-qwen-32b:free', // OpenRouter model for text generation
-      messages: [
-        {
-          role: 'user',
-          content: message.content, // Sending user message content for title generation
+export const myProvider = {
+  languageModels: {
+    // Using OpenRouter's DeepSeek model for AI language processing
+    'deepseek-model': async (messages: Array<Message>) => {
+      const response = await fetch(OPENROUTER_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         },
-      ],
-    }),
-  });
+        body: JSON.stringify({
+          model: 'deepseek/deepseek-r1-distill-qwen-32b:free',  // The specific OpenRouter model
+          messages: messages.map(message => ({
+            role: message.role,
+            content: message.content,
+          })),
+        }),
+      });
 
-  const data = await response.json();
+      const data = await response.json();
 
-  if (data && data.reply) {
-    return data.reply; // Returning the model's generated title
-  } else {
-    throw new Error('Error: No reply from OpenRouter API');
-  }
+      if (data && data.reply) {
+        return data.reply; // Returning the model's reply
+      } else {
+        throw new Error('Error: No reply from OpenRouter API');
+      }
+    },
+  },
+  imageModels: {
+    'small-model': async () => {
+      // Image model handling code here
+    },
+    'large-model': async () => {
+      // Image model handling code here
+    },
+  },
+};
+
+// Define available chat models with only the DeepSeek model
+interface ChatModel {
+  id: string;
+  name: string;
+  description: string;
 }
 
-// Function to delete trailing messages by chatId
-export async function deleteTrailingMessages({ id }: { id: string }) {
-  const [message] = await getMessageById({ id });
-
-  await deleteMessagesByChatIdAfterTimestamp({
-    chatId: message.chatId,
-    timestamp: message.createdAt,
-  });
-}
-
-// Function to update chat visibility
-export async function updateChatVisibility({
-  chatId,
-  visibility,
-}: {
-  chatId: string;
-  visibility: VisibilityType;
-}) {
-  await updateChatVisiblityById({ chatId, visibility });
-}
+export const chatModels: Array<ChatModel> = [
+  {
+    id: 'deepseek-model',
+    name: 'DeepSeek Model',
+    description: 'Advanced reasoning and AI-powered solutions using the DeepSeek model.',
+  },
+];
