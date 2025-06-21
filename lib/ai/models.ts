@@ -1,4 +1,4 @@
-import { customProvider, LanguageModelV1, Message } from 'ai'; // Import necessary types
+import { customProvider, LanguageModelV1, Message, LanguageModelV1CallOptions } from 'ai'; // Import necessary types
 
 // Define OpenRouter API URL (replace with actual API endpoint)
 const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
@@ -35,8 +35,13 @@ export const myProvider = customProvider({
   languageModels: {
     // Now we wrap OpenRouter fetch inside LanguageModelV1 with a valid doGenerate method
     'deepseek/deepseek-r1-distill-qwen-32b:free': {
-      doGenerate: async (messages: Array<Message>) => {
+      doGenerate: async (options: LanguageModelV1CallOptions) => {
+        // Extract the messages from the options object (since it doesn't just take a plain array)
+        const { messages } = options;
+        
+        // Fetch the response from OpenRouter API
         const reply = await fetchOpenRouterResponse(messages);
+        
         return { text: reply }; // Ensure the response matches LanguageModelV1's structure
       }
     },
