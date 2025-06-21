@@ -65,8 +65,8 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Select the language model based on the provided selectedChatModel
-    const selectedModel = myProvider.languageModels[selectedChatModel] || myProvider.languageModels['gpt-4.1']; // Default to 'gpt-4.1'
+    // Use the `languageModel()` method to select the model dynamically based on `selectedChatModel`
+    const selectedModel = myProvider.languageModel(selectedChatModel) || myProvider.languageModel('gpt-4.1'); // Default to 'gpt-4.1' if not found
 
     // Stream the text using the selected model
     return createDataStreamResponse({
