@@ -1,42 +1,33 @@
-import {
-  type Message,
-  createDataStreamResponse,
-  smoothStream,
-  streamText,
-} from 'ai';
-
+import { type Message } from 'ai';
 import { auth } from '@/app/(auth)/auth';
-import { myProvider } from '@/lib/ai/models';
-import { systemPrompt } from '@/lib/ai/prompts';
 import {
   deleteChatById,
   getChatById,
   saveChat,
   saveMessages,
 } from '@/lib/db/queries';
-import {
-  generateUUID,
-  getMostRecentUserMessage,
-  sanitizeResponseMessages,
-} from '@/lib/utils';
-
+import { generateUUID, getMostRecentUserMessage } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
-import { createDocument } from '@/lib/ai/tools/create-document';
-import { updateDocument } from '@/lib/ai/tools/update-document';
-import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
-import { getWeather } from '@/lib/ai/tools/get-weather';
 
 // Define the Hugging Face API URL
 const HUGGINGFACE_API_URL = "https://mirxakamran893-LOGIQCURVECHATIQBOT.hf.space/chat";
 
+// Define pre-messages (system messages to guide the AI)
+const preMessages = [
+  {
+    role: 'system',
+    content: 'You are LogIQ Curve AI, an intelligent assistant powered by Hugging Face.',
+  },
+  {
+    role: 'system',
+    content: 'Please assist the user with any queries related to LogIQ Curve services and AI-powered solutions.',
+  },
+];
+
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const {
-    id,
-    messages,
-    selectedChatModel,
-  }: { id: string; messages: Array<Message>; selectedChatModel: string } = await request.json();
+  const { id, messages }: { id: string; messages: Array<Message> } = await request.json();
 
   const session = await auth();
 
@@ -62,13 +53,16 @@ export async function POST(request: Request) {
   });
 
   try {
+    // Combine pre-messages with user messages to send them as context to Hugging Face API
+    const combinedMessages = [...preMessages, ...messages];
+
     // Send the user message to Hugging Face API for chat replies
     const response = await fetch(HUGGINGFACE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // If Hugging Face API requires an API key, include it here
-        // 'Authorization': `Bearer YOUR_HUGGINGFACE_API_KEY`,
+        // Add Authorization header if needed
+        // 'Authorization': `Bearer YOUR_HUGGINGFACE_API_KEY`
       },
       body: JSON.stringify({
         inputs: {
@@ -81,7 +75,7 @@ export async function POST(request: Request) {
 
     // Ensure that the response contains the expected data
     if (data && data.reply) {
-      const chatReply = data.reply;  // This is the reply from Hugging Face API
+      const chatReply = data.reply; // This is the reply from Hugging Face API
 
       // Save the response from Hugging Face into your messages collection
       await saveMessages({
