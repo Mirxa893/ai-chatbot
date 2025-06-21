@@ -33,9 +33,9 @@ const fetchOpenRouterResponse = async (messages: Array<Message>) => {
 // Export the language model provider
 export const myProvider = customProvider({
   languageModels: {
-    // Now we wrap OpenRouter fetch inside LanguageModelV1 with a valid generate method
+    // Now we wrap OpenRouter fetch inside LanguageModelV1 with a valid doGenerate method
     'deepseek/deepseek-r1-distill-qwen-32b:free': {
-      generate: async (messages: Array<Message>) => {
+      doGenerate: async (messages: Array<Message>) => {
         const reply = await fetchOpenRouterResponse(messages);
         return { text: reply }; // Ensure the response matches LanguageModelV1's structure
       }
