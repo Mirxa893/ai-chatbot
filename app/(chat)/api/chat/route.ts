@@ -27,8 +27,7 @@ import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 
 // Define OpenRouter API URL
-const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions'; // Define the correct OpenRouter API endpoint
-
+const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
 const OPENROUTER_API_KEY = 'your-openrouter-api-key'; // Replace with your actual OpenRouter API Key
 
 export const maxDuration = 60;
@@ -69,8 +68,8 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Directly use 'deepseek-model' as the selected model
-    const selectedModel = myProvider.languageModels['deepseek-model']; // No fallback needed, only DeepSeek model
+    // Use the languageModel method to select the model dynamically based on selectedChatModel
+    const selectedModel = myProvider.languageModel(selectedChatModel); // Dynamically select model
 
     // Fetch the response from OpenRouter using the selected model
     const response = await fetch(OPENROUTER_API_URL, {
