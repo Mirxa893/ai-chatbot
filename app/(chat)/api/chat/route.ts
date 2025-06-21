@@ -1,37 +1,3 @@
-import {
-  type Message,
-  createDataStreamResponse,
-  smoothStream,
-  streamText,
-} from 'ai';
-
-import { auth } from '@/app/(auth)/auth';
-import { myProvider } from '@/lib/ai/models';
-import { systemPrompt } from '@/lib/ai/prompts';
-import {
-  deleteChatById,
-  getChatById,
-  saveChat,
-  saveMessages,
-} from '@/lib/db/queries';
-import {
-  generateUUID,
-  getMostRecentUserMessage,
-  sanitizeResponseMessages,
-} from '@/lib/utils';
-
-import { generateTitleFromUserMessage } from '../../actions';
-import { createDocument } from '@/lib/ai/tools/create-document';
-import { updateDocument } from '@/lib/ai/tools/update-document';
-import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
-import { getWeather } from '@/lib/ai/tools/get-weather';
-
-// Define OpenRouter API URL
-const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
-const OPENROUTER_API_KEY = 'your-openrouter-api-key'; // Replace with your OpenRouter API Key
-
-export const maxDuration = 60;
-
 export async function POST(request: Request) {
   const {
     id,
@@ -68,8 +34,8 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Ensure that 'deepseek-model' is selected or fallback to a default model
-    const selectedModel = myProvider.languageModels[selectedChatModel] || myProvider.languageModels['deepseek-model'];
+    // Directly use 'deepseek-model' as the selected model
+    const selectedModel = myProvider.languageModels['deepseek-model']; // No fallback needed, only DeepSeek model
 
     // Fetch the response from OpenRouter using the selected model
     const response = await fetch(OPENROUTER_API_URL, {
@@ -114,36 +80,5 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error while processing request:', error);
     return new Response('Error while processing request', { status: 500 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
-
-  if (!id) {
-    return new Response('Not Found', { status: 404 });
-  }
-
-  const session = await auth();
-
-  if (!session || !session.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
-
-  try {
-    const chat = await getChatById({ id });
-
-    if (chat.userId !== session.user.id) {
-      return new Response('Unauthorized', { status: 401 });
-    }
-
-    await deleteChatById({ id });
-
-    return new Response('Chat deleted', { status: 200 });
-  } catch (error) {
-    return new Response('An error occurred while processing your request', {
-      status: 500,
-    });
   }
 }
