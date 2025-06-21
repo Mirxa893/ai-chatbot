@@ -1,19 +1,44 @@
-import { openRouter } from 'openrouter';
+// Define the OpenRouter API URL
+const OPENROUTER_API_URL = 'https://api.openrouter.ai/v1/chat/completions';
 
-// Initialize OpenRouter with your API Key (replace 'your-openrouter-api-key' with your actual key)
-const openRouterClient = openRouter({
-  apiKey: 'your-openrouter-api-key',  // Replace with your OpenRouter API Key
-});
+// Set up your OpenRouter API Key here (replace with your actual API key)
+const OPENROUTER_API_KEY = 'your-openrouter-api-key';  // Replace with your OpenRouter API Key
 
-// Define the model you want to use (only OpenRouter's DeepSeek model)
 export const myProvider = {
   languageModels: {
-    // Use OpenRouter's DeepSeek model for all language processing tasks
-    'deepseek-model': openRouterClient.getModel('deepseek/deepseek-r1-distill-qwen-32b:free'), // OpenRouter's free model
+    // Using OpenRouter's DeepSeek model for AI language processing
+    'deepseek-model': async (messages: Array<Message>) => {
+      const response = await fetch(OPENROUTER_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek/deepseek-r1-distill-qwen-32b:free',  // The specific OpenRouter model
+          messages: messages.map(message => ({
+            role: message.role,
+            content: message.content,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data && data.reply) {
+        return data.reply; // Returning the model's reply
+      } else {
+        throw new Error('Error: No reply from OpenRouter API');
+      }
+    },
   },
   imageModels: {
-    'small-model': openRouterClient.getImageModel('dall-e-2'), // Example image generation model
-    'large-model': openRouterClient.getImageModel('dall-e-3'),
+    'small-model': async () => {
+      // Image model handling code here
+    },
+    'large-model': async () => {
+      // Image model handling code here
+    },
   },
 };
 
