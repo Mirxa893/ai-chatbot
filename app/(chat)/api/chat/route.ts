@@ -37,13 +37,15 @@ export async function POST(request: Request) {
   }
 
   // Save the user message with a generated UUID for the message ID
+  const userMessageWithId = {
+    ...userMessage,
+    createdAt: new Date(),
+    chatId: id,
+    id: generateUUID(), // Add a unique `id` for the user message
+  };
+
   await saveMessages({
-    messages: [{
-      ...userMessage, 
-      createdAt: new Date(),
-      chatId: id,
-      id: generateUUID(), // Ensure each message has a unique ID
-    }],
+    messages: [userMessageWithId], // Save the user message with the unique `id`
   });
 
   try {
@@ -64,24 +66,22 @@ export async function POST(request: Request) {
 
     const data = await response.json();
 
-    // Ensure that the response contains the expected data
     if (data && data.reply) {
       const chatReply = data.reply; // This is the reply from Hugging Face API
 
-      // Save the response from Hugging Face into your messages collection
+      // Save the assistant's reply with a unique ID
+      const assistantMessageWithId = {
+        role: 'assistant',
+        content: chatReply,
+        createdAt: new Date(),
+        chatId: id,
+        id: generateUUID(), // Add a unique `id` for the assistant's reply
+      };
+
       await saveMessages({
-        messages: [
-          {
-            role: 'assistant',
-            content: chatReply,
-            createdAt: new Date(),
-            chatId: id,
-            id: generateUUID(), // Generate a unique `id` for the response message
-          },
-        ],
+        messages: [assistantMessageWithId], // Save the assistant's reply with a unique `id`
       });
 
-      // Return the response data
       return new Response(JSON.stringify({ reply: chatReply }), {
         status: 200,
         headers: {
