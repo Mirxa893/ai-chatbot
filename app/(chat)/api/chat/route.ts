@@ -65,6 +65,12 @@ export async function POST(request: Request) {
   });
 
   try {
+    // Check if the selected model exists and is valid
+    const validModels = ['gpt-4.1', 'o3', 'o4-mini'];
+    if (!validModels.includes(selectedChatModel)) {
+      return new Response('Invalid model selected', { status: 400 });
+    }
+
     // Use the `languageModel()` method to select the model dynamically based on `selectedChatModel`
     const selectedModel = myProvider.languageModel(selectedChatModel) || myProvider.languageModel('gpt-4.1'); // Default to 'gpt-4.1' if not found
 
@@ -107,7 +113,7 @@ export async function POST(request: Request) {
                 await saveMessages({
                   messages: sanitizedResponseMessages.map((message) => {
                     return {
-                      id: message.id, // Ensure each message has an id
+                      id: message.id,  // Ensure each message has an id
                       chatId: id,
                       role: message.role,
                       content: message.content,
@@ -127,13 +133,12 @@ export async function POST(request: Request) {
         });
 
         result.consumeStream();
-
         result.mergeIntoDataStream(dataStream, {
           sendReasoning: true,
         });
       },
       onError: () => {
-        return 'Oops, an error occured!';
+        return 'Oops, an error occurred!';
       },
     });
   } catch (error) {
